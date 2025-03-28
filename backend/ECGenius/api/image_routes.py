@@ -7,6 +7,7 @@ from ..utils.image_converter.image_to_sequence import image_to_sequence, convert
 from ..utils.image_converter.ecg_processing import process_ecg_image
 import shutil
 import random
+import json
 
 image_bp = Blueprint('image_bp', __name__)
 
@@ -31,7 +32,7 @@ def create_image_and_digitize():
         image_data = image_data.split("base64,")[1]
 
     try:
-        image_bytes = base64.b64decode(image_data)  # Decode the base64 image data
+        image_bytes = base64.b64decode(image_data) # Decode the base64 image data
     except Exception as e:
         return jsonify({'error': 'Failed to decode image', 'message': str(e)}), 400
 
@@ -58,9 +59,9 @@ def create_image_and_digitize():
     
     # Enhance the image
     contrast_enhancer = ImageEnhance.Contrast(cropped_image_rgb)
-    enhanced_image = contrast_enhancer.enhance(1.2)  # Increase contrast
+    enhanced_image = contrast_enhancer.enhance(1.2) # Increase contrast
     brightness_enhancer = ImageEnhance.Brightness(enhanced_image)
-    enhanced_image = brightness_enhancer.enhance(1.2)  # Increase brightness
+    enhanced_image = brightness_enhancer.enhance(1.2) # Increase brightness
 
     enhanced_image.save(filepath) 
     
@@ -89,16 +90,22 @@ def create_image_and_digitize():
     if not bounded_box_image_path or not os.path.exists(bounded_box_image_path):
         return jsonify({'error': 'Failed to generate bounded box image'}), 500
 
+    # Get original bounded box image before highlighting(we need it for the ecgresults page)
+    original_bounded_box = Image.open(bounded_box_image_path).convert("RGB")
+    buffered_original = io.BytesIO()
+    original_bounded_box.save(buffered_original, format="PNG")
+    original_bounded_box_base64 = base64.b64encode(buffered_original.getvalue()).decode('utf-8')
+
     # Highlight random ECG sections
     base_name = os.path.splitext(os.path.basename(bounded_box_image_path))[0]
     yolo_txt_path = os.path.join(detect_folder, "labels", base_name + ".txt")
-    highlighted_image = highlight_random_ecg_sections(bounded_box_image_path, yolo_txt_path)
-
+    highlighted_image, boxes = highlight_random_ecg_sections(bounded_box_image_path, yolo_txt_path)
+    
     # Enhance the highlighted bounded box image
     contrast_enhancer = ImageEnhance.Contrast(highlighted_image)
-    enhanced_highlighted_image = contrast_enhancer.enhance(1.2)  # Increase contrast
+    enhanced_highlighted_image = contrast_enhancer.enhance(1.2) # Increase contrast
     brightness_enhancer = ImageEnhance.Brightness(enhanced_highlighted_image)
-    enhanced_highlighted_image = brightness_enhancer.enhance(1.1)  # Increase brightness
+    enhanced_highlighted_image = brightness_enhancer.enhance(1.1) # Increase brightness
     
     buffered = io.BytesIO()
     enhanced_highlighted_image.save(buffered, format="PNG")
@@ -129,15 +136,17 @@ def create_image_and_digitize():
         'filename': fileuuid,
         'image': enhanced_image_base64,
         'boundedboximage': highlighted_image_base64,
+        'boxes': boxes,
+        'original_boundedbox': original_bounded_box_base64,
         'status': 'Success'
     }), 200
 
-
 def highlight_random_ecg_sections(image_path, yolo_txt_path):
     """
-    Highlights random sections on the ECG image using YOLOv7 bounding boxes.
+    Highlights random sections on the ECG image using YOLOv7 bounding boxes. returns boxes too for the ecgresults page.
     """
-    colors = ["red", "green", "blue", "yellow", "purple"]
+
+    colors = ["#2196F3", "#FFEB3B", "#F44336", "#4CAF50", "#9C27B0"]
     
     image = Image.open(image_path).convert("RGB")
     draw = ImageDraw.Draw(image)
@@ -160,13 +169,11 @@ def highlight_random_ecg_sections(image_path, yolo_txt_path):
             y1 = int(y_center + box_height / 2)
             boxes_by_lead.append((x0, y0, x1, y1))
 
-    if not boxes_by_lead:
-        print("⚠️ No bounding boxes found.") # Testing output
-        return image  # Return the original image if no boxes found
 
-    # Randomly highlight at least one lead
+     # Randomly highlight at least one lead
     num_boxes_to_highlight = min(5, len(boxes_by_lead))
     selected_indices = random.sample(range(len(boxes_by_lead)), num_boxes_to_highlight)
+    boxes = {}  
 
     for i, idx in enumerate(selected_indices):
         x0, y0, x1, y1 = boxes_by_lead[idx]
@@ -174,6 +181,80 @@ def highlight_random_ecg_sections(image_path, yolo_txt_path):
         new_width = random.randint(int(width * 0.1), int(width * 0.4))
         x_start = random.randint(x0, x1 - new_width)
         x_end = x_start + new_width
-        draw.rectangle([x_start, y0, x_end, y1], outline=colors[i % len(colors)], width=3)
+        color = colors[i % len(colors)] 
+        draw.rectangle([x_start, y0, x_end, y1], outline=color, width=3)
+        boxes[color] = (x_start, y0, x_end, y1)  
 
-    return image
+    return image, boxes
+
+@image_bp.route('/single-box-image', methods=['POST'])
+def get_single_box_image():
+    try:
+        if 'image' not in request.files:
+            return jsonify({'error': 'No image file provided'}), 400
+        
+        image_file = request.files['image']
+        
+        boxes_json = request.form.get('boxes', '{}')
+        try:
+            boxes = json.loads(boxes_json)
+            print("Available boxes:", boxes)  # Debug
+        except json.JSONDecodeError:
+            return jsonify({'error': 'Invalid boxes format'}), 400
+            
+        color = request.form.get('color')
+        if not color:
+            return jsonify({'error': 'No color specified'}), 400
+        try:
+            img = Image.open(image_file.stream).convert("RGB")
+            draw = ImageDraw.Draw(img)
+            
+            color = color.upper()
+            if not color.startswith('#'):
+                color = '#' + color
+            
+            if color in boxes:
+                x0, y0, x1, y1 = boxes[color]
+                draw.rectangle([x0, y0, x1, y1], outline=color, width=5)
+            else:
+                if boxes:
+                    first_color = list(boxes.keys())[0]
+                    x0, y0, x1, y1 = boxes[first_color]
+                    draw.rectangle([x0, y0, x1, y1], outline=first_color, width=5)
+                    color = first_color  
+                else:
+                    return jsonify({'error': 'No valid boxes available'}), 400
+            
+           
+            buffered = io.BytesIO()
+            img.save(buffered, format="PNG")
+            img_base64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
+            
+            return jsonify({
+                'image': img_base64,
+                'requested_color': color,
+                'available_colors': list(boxes.keys()),
+                'status': 'success'
+            }), 200
+            
+        except Exception as e:
+            return jsonify({'error': f'Image processing failed: {str(e)}'}), 500
+            
+    except Exception as e:
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
+
+def keep_only_one_box(pil_image, boxes, keep_color):
+    if keep_color not in boxes:
+        return pil_image
+    
+    # Create copy of the original image
+    copy_image = pil_image.copy()
+    draw = ImageDraw.Draw(copy_image)
+    
+    # Draw specified box
+    coords = boxes[keep_color]
+    draw.rectangle(coords, outline=keep_color, width=3)
+    
+    return copy_image
+
+

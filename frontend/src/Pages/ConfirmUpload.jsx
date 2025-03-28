@@ -272,7 +272,7 @@ const ConfirmUpload = () => {
       image.onload = async () => {
         try {
           const imageBase64 = await convertImageToBase64(image);
-          
+
           // save the original image to indexeddb
           await saveImageToDB(uniqueId, imageBase64);
           
@@ -292,16 +292,25 @@ const ConfirmUpload = () => {
           if (uploadResponse.ok) {
             const uploadData = await uploadResponse.json();
             const filename = uploadData.filename;
-            const boundedBoxImage = uploadData.boundedboximage;
-  
-            // saved the boundedboximage to IndexedDB
-            if (boundedBoxImage) {
-              await saveBoundedBoxImageToDB(uniqueId, boundedBoxImage);
-            }
-  
+            
+            // Save both versions of the bounded box image
+            await Promise.all([
+              saveBoundedBoxImageToDB(
+                `${uniqueId}_bbox`, 
+                uploadData.boundedboximage, 
+                uploadData.boxes, 
+                'highlighted'
+              ),
+              saveBoundedBoxImageToDB(
+                `${uniqueId}_original`, 
+                uploadData.original_boundedbox, 
+                null, 
+                'original'
+              )
+            ]);
             // update history with filename(used to identify ecgs individually)
             await updateHistoryWithFilename(uniqueId, filename);
-            
+
             resolve(filename);
           } else {
             console.error("Upload failed");
@@ -315,9 +324,9 @@ const ConfirmUpload = () => {
     });
   };
   
-  const saveBoundedBoxImageToDB = async (uniqueId, imageData) => {
+  const saveBoundedBoxImageToDB = async (uniqueId, imageData, boxes, type) => {
     if (!db) throw new Error("Database not initialized");
-    
+
     // normalize the image data
     let processedImageData;
     try {
@@ -326,7 +335,7 @@ const ConfirmUpload = () => {
       processedImageData = imageData.startsWith('data:image') 
         ? imageData 
         : `data:image/png;base64,${imageData}`;
-        
+
       // validation(checking image format)
       if (!processedImageData.match(/^data:image\/(png|jpeg|jpg);base64,/)) {
         throw new Error("Invalid image format");
@@ -341,9 +350,10 @@ const ConfirmUpload = () => {
       const store = transaction.objectStore('images');
       
       const request = store.put({ 
-        uniqueId: `${uniqueId}_bbox`,
+        uniqueId,
         imageData: processedImageData,
-        type: 'bounded_box',
+        boxes: type === 'highlighted' ? boxes : null,
+        type,
         createdAt: new Date().toISOString()
       });
       

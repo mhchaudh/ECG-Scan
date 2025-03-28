@@ -1,59 +1,14 @@
-.recharts-tooltip-wrapper {
-    background-color: white;
-    color: black;
-    border: none;
-    border-radius: 4px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-  }
-  
-  .recharts-tooltip-item {
-    color: black;
-  }
-  
-  .recharts-tooltip-item-list {
-    color: black;
-  }
-  
-  .dark-mode .recharts-tooltip-wrapper {
-    background-color: #121212 !important;
-    color: white !important;
-    border: 1px solid #444 !important;
-    box-shadow: 0 0 10px rgba(255, 255, 255, 0.1) !important;
-  }
-  
-  .dark-mode .recharts-tooltip-item {
-    color: white !important;
-  }
-  
-  .dark-mode .recharts-tooltip-item-list {
-    color: white !important;
-  }
-  
-  .dark-mode .recharts-default-tooltip {
-    background-color: #121212 !important;
-  }
-  
-  .dark-mode .recharts-tooltip-label {
-    color: #aaa !important;
-    font-weight: bold;
-    margin-bottom: 8px;
-  }
-  
-
-  .dark-mode .recharts-tooltip-item-separator {
-    border-top: 1px solid #444 !important;
-  }
-
-.dark-mode .recharts-cartesian-axis line,
-.dark-mode .recharts-cartesian-axis-tick line {
-  stroke: white !important;
+.color-box-force {
+  width: 16px !important;
+  height: 16px !important;
+  border-radius: 4px !important;
+  margin-right: 8px !important;
+  display: inline-block !important;
+  border: 1px solid rgba(0, 0, 0, 0.3) !important;
+  background-color: var(--box-color) !important;
 }
 
-.dark-mode .recharts-cartesian-axis text,
-.dark-mode .recharts-cartesian-axis-tick text {
-  fill: white !important;
-}
-
-.dark-mode .recharts-y-axis .recharts-label {
-  fill: white !important;
+.dark-mode .color-box-force {
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  background-color: var(--box-color) !important;
 }

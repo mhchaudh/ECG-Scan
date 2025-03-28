@@ -337,6 +337,7 @@ const ECGResults = () => {
             </>
           )}
         </Box>
+                  border: isDarkMode ? '1px solid #444' : '1px solid #ddd'
       </Paper>
     </Container>
   );
