@@ -169,7 +169,6 @@ def highlight_random_ecg_sections(image_path, yolo_txt_path):
             y1 = int(y_center + box_height / 2)
             boxes_by_lead.append((x0, y0, x1, y1))
 
-
      # Randomly highlight at least one lead
     num_boxes_to_highlight = min(5, len(boxes_by_lead))
     selected_indices = random.sample(range(len(boxes_by_lead)), num_boxes_to_highlight)

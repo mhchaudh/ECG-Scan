@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { Container, Typography, Paper, Box, Radio, RadioGroup, FormControlLabel, TextField, Button } from "@mui/material";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { Container, Typography, Paper, Box, Radio, RadioGroup, FormControlLabel, TextField, Button, List, ListItem, ListItemText, Divider, Dialog, DialogTitle, DialogContent, DialogActions, CircularProgress } from "@mui/material";
 import './ECGResults.css';
 
 // use indexeddb instead of localstorage
@@ -60,11 +59,30 @@ const ECGResults = () => {
   const [feedback, setFeedback] = useState("");
   const [otherFeedback, setOtherFeedback] = useState("");
   const [submittedFeedback, setSubmittedFeedback] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [selectedColorImage, setSelectedColorImage] = useState(null);
+  const [showColorPopup, setShowColorPopup] = useState(false);
+  const [loadingColor, setLoadingColor] = useState(false);
   const [db, setDb] = useState(null);
   const API_URL = import.meta.env.VITE_API_URL;
+  const colorOptions = ["#2196F3", "#FFEB3B", "#F44336", "#4CAF50", "#9C27B0"];
 
-  const colors = ["red", "green", "blue", "yellow", "purple"];
+  const [isDarkMode, setIsDarkMode] = useState(
+    location.state?.darkMode ?? document.body.classList.contains("dark-mode")
+  );
+
+  // check for changes in dark mode
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setIsDarkMode(document.body.classList.contains("dark-mode"));
+    });
+    
+    observer.observe(document.body, {
+      attributes: true,
+      attributeFilter: ['class']
+    });
+
+    return () => observer.disconnect();
+  }, []);
 
   // initialize the db 
   useEffect(() => {
@@ -100,26 +118,80 @@ const ECGResults = () => {
     setIsDarkMode(document.body.classList.contains("dark-mode"));
   }, []);
 
+  const handleColorBoxClick = async (color) => {
+    if (!db) return;
+  
+    setLoadingColor(true);
+    
+    try {
+      const [originalImageData, highlightedImageData] = await Promise.all([
+        getFromDB(db, 'images', `${uniqueId}_original`),
+        getFromDB(db, 'images', `${uniqueId}_bbox`)
+      ]);
+  
+      if (!originalImageData?.imageData) {
+        throw new Error("Original ECG image not found");
+      }
+      if (!highlightedImageData?.boxes) {
+        throw new Error("ECG highlight data not found");
+      }
+  
+      const blob = await (await fetch(originalImageData.imageData)).blob();
+      const imageFile = new File([blob], "ecg_original.png", { type: "image/png" });
+  
+      const formData = new FormData();
+      formData.append('image', imageFile);
+      formData.append('boxes', JSON.stringify(highlightedImageData.boxes));
+      formData.append('color', color);
+      console.log(highlightedImageData.boxes);
+      console.log(color);
 
+  
+      const response = await fetch(`${API_URL}/api/single-box-image`, {
+        method: "POST",
+        body: formData
+      });
+  
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.message || "Failed to process image");
+      }
+  
+      const result = await response.json();
+      setSelectedColorImage(result.image);
+      setShowColorPopup(true);
+  
+    } catch (error) {
+      console.error("Color highlight failed:", error);
+      alert(`Error: ${error.message}`);
+    } finally {
+      setLoadingColor(false);
+    }
+  };
   const loadData = async (database) => {
     if (!uniqueId || !database) return;
   
     try {
-      // check if the object exists before trying to access them
-      const requiredStores = ['classificationResults', 'images', 'feedback', 'history'];
-      for (const store of requiredStores) {
-        if (!database.objectStoreNames.contains(store)) {
-          throw new Error(`Object store ${store} not found`);
-        }
-      }
-  
-      const [classification, image, savedFeedback, historyItem, boundedBoxImage] = await Promise.all([
+      const [
+        classification, 
+        image, 
+        savedFeedback, 
+        historyItem, 
+        boundedBoxImage,
+        originalBoundedBoxImage
+      ] = await Promise.all([
         getFromDB(database, 'classificationResults', uniqueId),
         getFromDB(database, 'images', uniqueId),
         getFromDB(database, 'feedback', uniqueId),
         getFromDB(database, 'history', uniqueId),
-        getFromDB(database, 'images', `${uniqueId}_bbox`) // get the bounded box image
+        getFromDB(database, 'images', `${uniqueId}_bbox`),
+        getFromDB(database, 'images', `${uniqueId}_original`)
       ]);
+  
+      // check if both the images exist
+      if (!boundedBoxImage || !originalBoundedBoxImage) {
+        throw new Error("Missing required image data in database");
+      }
   
       setClassificationResult(classification?.result || null);
       setImageUrl(image?.imageData || null);
@@ -232,11 +304,12 @@ const ECGResults = () => {
       </Container>
     );
   }
-
-  const diagnosesData = Object.entries(classificationResult.diagnoses).map(([diag, conf], index) => ({
-    name: diag,
-    confidence: (conf * 100).toFixed(0),
-    fill: colors[index % colors.length], 
+  const sortedDiagnosesWithColors = Object.entries(classificationResult.diagnoses)
+  .sort(([, confA], [, confB]) => confB - confA)
+  .map(([diag, conf], index) => ({
+    diag,
+    conf,
+    color: colorOptions[index % colorOptions.length],
   }));
 
   return (
@@ -247,51 +320,68 @@ const ECGResults = () => {
         </Typography>
 
         {/* Diagnoses */}
-        <Box sx={{ mt: 4 }}>
-          <Typography variant="h6" color="text.primary">
-            Diagnoses:
+        <Box sx={{ 
+          mt: 4, 
+          p: 3, 
+          border: isDarkMode ? "1px solid #444" : "1px solid #e0e0e0", 
+          borderRadius: 2, 
+          backgroundColor: isDarkMode ? "#1a1a1a" : "#f9f9f9" 
+        }}>
+          <Typography variant="h6" color="text.primary" sx={{ mb: 2 }}>
+            Diagnoses (Ranked by Confidence):
           </Typography>
-          <ResponsiveContainer width="100%" height={400}>
-            <BarChart data={diagnosesData} margin={{ top: 20, right: 30, left: 20, bottom: 70 }}>
-              <XAxis dataKey="name" stroke={isDarkMode ? "#fff" : "#8884d8"} tick={false} axisLine={{ stroke: "#8884d8" }} />
-              <YAxis label={{ value: "Confidence (%)", angle: -90, position: "insideLeft", fill: isDarkMode ? "#fff" : "#000" }} tick={{ fill: isDarkMode ? "#fff" : "#000" }} />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: isDarkMode ? "#121212" : "#fff",  
-                  color: isDarkMode ? "#fff" : "#000",              
-                  border: isDarkMode ? "1px solid #444" : "none"    
-                }}
-              />
-              <Bar dataKey="confidence" fill="#8884d8" barSize={50} radius={[4, 4, 0, 0]}>
-                {diagnosesData.map((entry, index) => (
-                  <rect
-                    key={`bar-${index}`}
-                    x={entry.x} 
-                    y={entry.y} 
-                    width={entry.width} 
-                    height={entry.height} 
-                    fill={entry.fill} 
-                  />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+          <List>
+          {sortedDiagnosesWithColors.map(({ diag, conf, color }, index) => (
+            <div key={index}>
+              <ListItem sx={{ display: "flex", alignItems: "center" }}>
+                <Button 
+                  onClick={() => handleColorBoxClick(color)}
+                  sx={{
+                    minWidth: 24,
+                    width: 24,
+                    height: 24,
+                    padding: 0,
+                    backgroundColor: color,
+                    border: isDarkMode ? '1px solid rgba(255, 255, 255, 0.3)' : '1px solid rgba(0, 0, 0, 0.3)',
+                    borderRadius: '4px',
+                    marginRight: 2,
+                    '&:hover': {
+                      opacity: 0.8
+                    }
+                  }}
+                />
+
+                <ListItemText 
+                  primary={`${index + 1}. ${diag}`} 
+                  secondary={`Confidence: ${(conf * 100).toFixed(0)}%`}
+                  primaryTypographyProps={{
+                    sx: { fontWeight: 600, color: isDarkMode ? "#fff" : "#333" }
+                  }}
+                  secondaryTypographyProps={{
+                    sx: { color: isDarkMode ? "#bbb" : "#666" }
+                  }}
+                />
+              </ListItem>
+              {index < sortedDiagnosesWithColors.length - 1 && <Divider />}
+            </div>
+          ))}
+          </List>
         </Box>
 
         {/* Highlighted ECG Image */}
         {highlightedImageUrl && (
-  <Box sx={{ mt: 4, border: isDarkMode ? "1px solid #444" : "1px solid #e0e0e0",  borderRadius: 2, p: 2, backgroundColor: isDarkMode ? "#1a1a1a" : "#f9f9f9"} }>
-    <Typography variant="h6" color="text.primary" sx={{ mb: 2 }}>
-      ECG Sections Leading to Diagnosis
-    </Typography>
-    <Box
-      component="img"
-      src={highlightedImageUrl} // Use the URL directly (it's already base64 encoded)
-      alt="Highlighted ECG Sections"
-      sx={{ width: "100%", height: "auto", display: "block",  borderRadius: 1, border: isDarkMode ? "1px solid #555" : "1px solid #ddd" }}
-    />
-  </Box>
-)}
+            <Box sx={{ mt: 4, border: isDarkMode ? "1px solid #444" : "1px solid #e0e0e0",  borderRadius: 2, p: 2, backgroundColor: isDarkMode ? "#1a1a1a" : "#f9f9f9"} }>
+              <Typography variant="h6" color="text.primary" sx={{ mb: 2 }}>
+                ECG Sections Leading to Diagnosis
+              </Typography>
+              <Box
+                component="img"
+                src={highlightedImageUrl}
+                alt="Highlighted ECG Sections"
+                sx={{ width: "100%", height: "auto", display: "block",  borderRadius: 1, border: isDarkMode ? "1px solid #555" : "1px solid #ddd" }}
+              />
+            </Box>
+          )}
         {/* Feedback */}
         <Box sx={{ mt: 4, p: 3, border: isDarkMode ? "1px solid #444" : "1px solid #e0e0e0", borderRadius: 2, backgroundColor: isDarkMode ? "#1a1a1a" : "#f9f9f9" }}>
           <Typography variant="h6" color="text.primary" sx={{ mb: 2 }}>
@@ -337,7 +427,57 @@ const ECGResults = () => {
             </>
           )}
         </Box>
+        {/* Popup after we select the color */}
+        <Dialog 
+          open={showColorPopup} 
+          onClose={() => setShowColorPopup(false)}
+          maxWidth="md"
+          fullWidth
+        >
+          <DialogTitle sx={{ 
+            backgroundColor: isDarkMode ? "#1e1e1e" : "#fff",
+            color: isDarkMode ? "#fff" : "#000"
+          }}>
+            ECG Section Highlight
+          </DialogTitle>
+          <DialogContent sx={{ 
+            backgroundColor: isDarkMode ? "#1e1e1e" : "#fff",
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            minHeight: '300px'
+          }}>
+            {loadingColor ? (
+              <CircularProgress />
+            ) : selectedColorImage ? (
+              <img 
+                src={`data:image/png;base64,${selectedColorImage}`} 
+                alt="Selected ECG Section" 
+                style={{ 
+                  maxWidth: '100%', 
+                  maxHeight: '70vh',
+                  borderRadius: '4px',
                   border: isDarkMode ? '1px solid #444' : '1px solid #ddd'
+                }} 
+              />
+            ) : (
+              <Typography color="text.secondary">
+                No image available
+              </Typography>
+            )}
+          </DialogContent>
+          <DialogActions sx={{ 
+            backgroundColor: isDarkMode ? "#1e1e1e" : "#fff",
+            padding: '16px 24px'
+          }}>
+            <Button 
+              onClick={() => setShowColorPopup(false)}
+              sx={{ color: isDarkMode ? "#fff" : "#000" }}
+            >
+              Close
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Paper>
     </Container>
   );
