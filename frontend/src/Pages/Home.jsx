@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 // Refrenced: https://mui.com/material-ui/all-components/?srsltid=AfmBOoo3ZuM3R9qLhp_JDLn0Gp7fmQW_nsLmIcqM5lASyIL9qzzICiwf
 import { Button, Grid, Typography, IconButton, Dialog, DialogTitle, DialogActions, Checkbox, DialogContent, FormControlLabel} from "@mui/material";
@@ -12,13 +12,24 @@ const Home = () => {
   const videoRef = useRef(null); 
   const navigate = useNavigate(); 
   const [isCameraOpen, setIsCameraOpen] = useState(false); 
-  const [capturedImage, setCapturedImage] = useState(null); 
   const [disclaimerOpen, setDisclaimerOpen] = useState(!sessionStorage.getItem("disclaimerAccepted"));
   const [disclaimerAccepted, setDisclaimerAccepted] = useState(false); 
   const [flashEnabled, setFlashEnabled] = useState(false); 
   const [facingMode, setFacingMode] = useState("environment"); 
   const location = useLocation(); 
-  
+
+  const handleTakePictureClick = useCallback(() => {
+    setIsCameraOpen(true);
+    navigator.mediaDevices.getUserMedia({ video: { facingMode } })
+      .then(stream => {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play();
+      })
+      .catch(err => {
+        console.error("Error accessing camera: ", err);
+      });
+  }, [facingMode]);
+
   // check if the user is coming from confirmation pages
   const cameFromConfirm = location.state?.cameFromConfirm || false;
   const cameFromConfirmUpload = location.state?.cameFromConfirmUpload || false;
@@ -29,7 +40,7 @@ const Home = () => {
     } else if (cameFromConfirmUpload) {
       handleUploadButtonClick();
     }
-  }, [cameFromConfirm, cameFromConfirmUpload]);
+  }, [cameFromConfirm, cameFromConfirmUpload, handleTakePictureClick]);
 
   // this is to trigger the file input click for uploading an image
   const handleUploadButtonClick = () => {
@@ -62,19 +73,6 @@ const Home = () => {
     reader.readAsDataURL(file);
   };
 
-  // this is to to open the camera
-  const handleTakePictureClick = () => {
-    setIsCameraOpen(true);
-    navigator.mediaDevices.getUserMedia({ video: { facingMode } })
-      .then(stream => {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play();
-      })
-      .catch(err => {
-        console.error("Error accessing camera: ", err);
-      });
-  };
-
   // this is to capture the image from the video stream
   const handleCapture = () => {
     const canvas = document.createElement('canvas');
@@ -83,7 +81,6 @@ const Home = () => {
     const context = canvas.getContext('2d');
     context.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
     const imageUrl = canvas.toDataURL('image/png');
-    setCapturedImage(imageUrl);
     setIsCameraOpen(false);
 
     // stop the camera stream
@@ -138,14 +135,19 @@ const Home = () => {
         </DialogActions>
       </Dialog>
 
-      <Grid container spacing={3} justifyContent="center" alignItems="center" direction="column" style={{ height: '100vh' }}>
+      <Grid container spacing={3} justifyContent="center" alignItems="center" direction="column" style={{ height: '100vh', padding: '0 24px', maxWidth: '600px',  margin: '0 auto' }}>
         {!isCameraOpen ? (
           <>
             <Grid item>
               <img 
                 src={logo}
                 alt="ECGenius Logo" 
-                style={{ height: '200px', marginBottom: '20px' }} 
+                style={{ height: '200px', marginBottom: '16px',
+                  transition: 'transform 0.3s ease',
+                  '&:hover': {
+                    transform: 'scale(1.05)'
+                  }
+                }} 
               />
             </Grid>
             <Grid item>

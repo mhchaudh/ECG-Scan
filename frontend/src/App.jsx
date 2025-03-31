@@ -13,9 +13,6 @@ import logo from './assets/1-3b2842e1-removebg-preview.png';
 import { AppBar, Toolbar, Typography, IconButton, Menu, MenuItem, Box, Switch } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 
-
-// todo: extend dark mode to the new features
-
 function App() {
   const [dropdownOpen, setDropdownOpen] = useState(false); 
   const [isLoading, setIsLoading] = useState(true); 

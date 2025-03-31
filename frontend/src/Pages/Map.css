@@ -6,6 +6,7 @@ body {
   }
 .map-container {
     position: absolute;
+    z-index: 0;
     top: 64px; 
     left: 0;
     right: 0;
@@ -85,3 +86,6 @@ body {
   .dark-mode .leaflet-marker-icon {
     filter: hue-rotate(90deg) saturate(200%) brightness(90%) invert(100%);
   }
+.leaflet-top {
+  top: 70px;
+}

@@ -16,6 +16,5 @@ def classify_ecg():
         return jsonify({'error': 'Missing required parameters'}), 400
 
     result = process_ecg_for_diagnosis(ecg, sex, age)
-    print(result)
 
     return jsonify(result), 200

@@ -3,6 +3,7 @@
   padding: 0;
   box-sizing: border-box;
 }
+
 body {
   background-color: white;
   color: black;
@@ -102,6 +103,9 @@ body.dark-mode {
   overflow: auto;
   padding-bottom: 2rem;
 }
+.dark-mode .main-content {
+  background-color: #121212 !important;
+}
 
 .menu-item {
   border-bottom: 1px solid #ddd;
@@ -133,4 +137,62 @@ body.dark-mode {
 
 .MuiIconButton-root:focus {
   outline: none;
+}
+
+.dark-mode .MuiDialog-paper {
+  background-color: #1e1e1e !important;
+  border: 1px solid #444 !important;
+}
+
+.dark-mode .MuiDialogTitle-root {
+  background-color: #333 !important;
+  color: white !important;
+  border-bottom: 1px solid #444 !important;
+}
+
+.dark-mode .MuiCard-root {
+  background-color: #1e1e1e !important;
+  border: 1px solid #444 !important;
+}
+
+.dark-mode .MuiCardContent-root {
+  background-color: #1e1e1e !important;
+  color: white !important;
+}
+
+.dark-mode .MuiTypography-h6,
+.dark-mode .MuiTypography-subtitle2,
+.dark-mode .MuiTypography-body1 {
+  color: white !important;
+}
+
+.dark-mode .MuiGrid-root {
+  border-color: #444 !important;
+}
+
+.dark-mode .MuiButton-outlined {
+  border-color: #666 !important;
+  color: white !important;
+}
+
+.dark-mode .MuiCheckbox-root {
+  color: white !important;
+}
+
+.dark-mode img {
+  filter: brightness(0.9);
+}
+
+.dark-mode .MuiStack-root,
+.dark-mode .MuiBox-root {
+  background-color: transparent !important;
+}
+
+.dark-mode .MuiPaper-root {
+  background-color: #1e1e1e !important;
+  color: white !important;
+}
+
+.dark-mode .MuiRadio-root {
+  color: white !important;
 }

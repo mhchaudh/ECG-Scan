@@ -96,7 +96,16 @@ const __dirname = path.dirname(__filename);
     await confirmButton.click();
 
     console.log("Handling confirmation popup...");
-    let yesButton = await driver.findElement(By.xpath("//button[contains(text(), 'Yes')]"));
+    let yesButton = await driver.findElement(By.xpath("//button[contains(text(), 'Confirm')]"));
+    await driver.wait(
+      until.elementIsVisible(yesButton),
+      5000
+    );
+    
+    await driver.wait(
+      until.elementIsEnabled(yesButton),
+      5000);
+    
     await yesButton.click();
 
     console.log("Waiting for diagnosis and navigation to result page...");
