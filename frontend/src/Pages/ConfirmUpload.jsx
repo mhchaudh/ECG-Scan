@@ -608,8 +608,8 @@ const ConfirmUpload = () => {
           color: "white"
         }}>
           <CircularProgress size={80} thickness={4} sx={{ mb: 3, color: '#2196F3 !important'}} />
-          <Typography variant="h5" gutterBottom>Analyzing ECG...</Typography>
-          <Typography variant="body1">This may take a few moments</Typography>
+          <Typography variant="h5" gutterBottom className="analyzing-text-blue">Analyzing ECG.. .</Typography>
+          <Typography variant="body1" className="analyzing-text-blue" >This may take a few moments</Typography>
         </Box>
       )}
   
