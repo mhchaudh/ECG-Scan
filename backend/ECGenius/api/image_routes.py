@@ -112,7 +112,9 @@ def create_image_and_digitize():
     highlighted_image_base64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
 
     # Clean up detection folder
-    shutil.rmtree(detect_folder)
+    runs_folder = os.path.join(backend_dir, "runs")
+    if os.path.exists(runs_folder):
+        shutil.rmtree(runs_folder)
 
     # Delete the traced model file if it exists
     traced_model_path = os.path.join(backend_dir, "traced_model.pt")
