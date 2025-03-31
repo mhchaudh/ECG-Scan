@@ -334,21 +334,23 @@ const ECGResults = () => {
           {sortedDiagnosesWithColors.map(({ diag, conf, color }, index) => (
             <div key={index}>
               <ListItem sx={{ display: "flex", alignItems: "center" }}>
-                <Button 
-                  onClick={() => handleColorBoxClick(color)}
-                  sx={{
-                    minWidth: 24,
-                    width: 24,
-                    height: 24,
-                    padding: 0,
-                    backgroundColor: color,
-                    border: isDarkMode ? '1px solid rgba(255, 255, 255, 0.3)' : '1px solid rgba(0, 0, 0, 0.3)',
-                    borderRadius: '4px',
-                    marginRight: 2,
-                    '&:hover': {
-                      opacity: 0.8
-                    }
-                  }}
+              <Button 
+                onClick={() => handleColorBoxClick(color)}
+                className="color-box-force"
+                style={{ 
+                  backgroundColor: color,
+                  '--box-color': color 
+                }}
+                sx={{
+                  minWidth: 24,
+                  width: 24,
+                  height: 24,
+                  padding: 0,
+                  marginRight: 2,
+                  '&:hover': {
+                    opacity: 0.8
+                  }
+                }}
                 />
 
                 <ListItemText 
