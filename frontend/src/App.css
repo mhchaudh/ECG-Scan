@@ -196,3 +196,6 @@ body.dark-mode {
 .dark-mode .MuiRadio-root {
   color: white !important;
 }
+.dark-mode .MuiCircularProgress-root {
+  color: #2196F3 !important;
+}
