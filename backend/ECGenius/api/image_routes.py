@@ -40,17 +40,10 @@ def create_image_and_digitize():
     image_file = io.BytesIO(image_bytes)
     image = Image.open(image_file)
 
-    # Define the path to store the original image
-    backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
-    identifier_folder = os.path.join(backend_dir, f'{identifier_data}_OriginalImage')
-    os.makedirs(identifier_folder, exist_ok=True)  
-
     # Generate a unique filename using UUID, age, and gender
     fileuuid = uuid.uuid4().hex
     filename = f"{fileuuid}_{age_data}_{gender_data}"
-    filenamejpg = f"{filename}.jpg"
-    filepath = os.path.join(identifier_folder, filenamejpg)
-
+    
     # Convert the image to RGBA and crop non-white areas
     image = image.convert('RGBA')
     bbox = image.getbbox()
@@ -62,66 +55,73 @@ def create_image_and_digitize():
     enhanced_image = contrast_enhancer.enhance(1.2) # Increase contrast
     brightness_enhancer = ImageEnhance.Brightness(enhanced_image)
     enhanced_image = brightness_enhancer.enhance(1.2) # Increase brightness
-
-    enhanced_image.save(filepath) 
     
-    # Convert enhanced image to base64 to send to the frontend
+    # temporary storage path
+    backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+    temp_image_path = os.path.join(backend_dir, f"{filename}.jpg")
+    
+    # save enhanced image temporarily
+    enhanced_image.save(temp_image_path)
+    
+    # process ECG image using the path
+    process_ecg_image(temp_image_path, identifier_data, filename)
+    
+    # remove the temporary image file after processing(we dont need to store this its there in the frontend-)
+    if os.path.exists(temp_image_path):
+        os.remove(temp_image_path)
+    
+    # convert the enhanced image to base64 to send to the frontend
     buffered = io.BytesIO()
     enhanced_image.save(buffered, format="JPEG")
     enhanced_image_base64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
 
-    image_path = f"{filepath}"
-
-    # Process ECG image
-    process_ecg_image(image_path, identifier_data, filename)
-
-    # bounded box image in runs/detect/exp
+    # get the bounded box image in runs/detect/exp
     detect_folder = os.path.join(backend_dir, "runs/detect/exp")
     bounded_box_image_path = None
 
-    # Find the bounded box image in the detect folder
+    # get the bounded box image in the detect folder
     if os.path.exists(detect_folder) and os.path.isdir(detect_folder):
         for file_name in os.listdir(detect_folder):
             if file_name.lower().endswith(('.png', '.jpg', '.jpeg')):
                 bounded_box_image_path = os.path.join(detect_folder, file_name)
                 break
 
-    # Check if the bounded box image exists
+    # check if the bounded box image exists or not
     if not bounded_box_image_path or not os.path.exists(bounded_box_image_path):
         return jsonify({'error': 'Failed to generate bounded box image'}), 500
 
-    # Get original bounded box image before highlighting(we need it for the ecgresults page)
+    # get the original bounded box image before highlighting(we need it for the ecgresults page)
     original_bounded_box = Image.open(bounded_box_image_path).convert("RGB")
     buffered_original = io.BytesIO()
     original_bounded_box.save(buffered_original, format="PNG")
     original_bounded_box_base64 = base64.b64encode(buffered_original.getvalue()).decode('utf-8')
 
-    # Highlight random ECG sections
+    # highlight random ECG sections
     base_name = os.path.splitext(os.path.basename(bounded_box_image_path))[0]
     yolo_txt_path = os.path.join(detect_folder, "labels", base_name + ".txt")
     highlighted_image, boxes = highlight_random_ecg_sections(bounded_box_image_path, yolo_txt_path)
     
-    # Enhance the highlighted bounded box image
+    # enhance the highlighted bounded box image for display
     contrast_enhancer = ImageEnhance.Contrast(highlighted_image)
-    enhanced_highlighted_image = contrast_enhancer.enhance(1.2) # Increase contrast
+    enhanced_highlighted_image = contrast_enhancer.enhance(1.2) # increase contrast
     brightness_enhancer = ImageEnhance.Brightness(enhanced_highlighted_image)
-    enhanced_highlighted_image = brightness_enhancer.enhance(1.1) # Increase brightness
+    enhanced_highlighted_image = brightness_enhancer.enhance(1.1) # increase brightness
     
     buffered = io.BytesIO()
     enhanced_highlighted_image.save(buffered, format="PNG")
     highlighted_image_base64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
 
-    # Clean up detection folder
+    # clean up the detection folder
     runs_folder = os.path.join(backend_dir, "runs")
     if os.path.exists(runs_folder):
         shutil.rmtree(runs_folder)
 
-    # Delete the traced model file if it exists
+    # delete the traced model file if it exists
     traced_model_path = os.path.join(backend_dir, "traced_model.pt")
     if os.path.exists(traced_model_path):
         os.remove(traced_model_path)
 
-    # Append gender and age data to the .hea file
+    # append the gender and age data to the .hea file
     output_path = os.path.join(backend_dir, f"output_{identifier_data}")
     folder_path = os.path.join(output_path, filename)
     file_path = os.path.join(folder_path, 'Q0001.hea')
@@ -171,7 +171,7 @@ def highlight_random_ecg_sections(image_path, yolo_txt_path):
             y1 = int(y_center + box_height / 2)
             boxes_by_lead.append((x0, y0, x1, y1))
 
-     # Randomly highlight at least one lead
+    # randomly highlight at least one lead
     num_boxes_to_highlight = min(5, len(boxes_by_lead))
     selected_indices = random.sample(range(len(boxes_by_lead)), num_boxes_to_highlight)
     boxes = {}  
@@ -248,11 +248,11 @@ def keep_only_one_box(pil_image, boxes, keep_color):
     if keep_color not in boxes:
         return pil_image
     
-    # Create copy of the original image
+    # create a copy of the original image
     copy_image = pil_image.copy()
     draw = ImageDraw.Draw(copy_image)
     
-    # Draw specified box
+    # draw the specified box
     coords = boxes[keep_color]
     draw.rectangle(coords, outline=keep_color, width=3)
     
