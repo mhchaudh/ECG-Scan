@@ -13,30 +13,33 @@ import "leaflet/dist/leaflet.css";
 import Fuse from 'fuse.js';
 import debounce from 'lodash.debounce';
 
-// use IndexedDB instead of localstorage
 const initializeDB = () => {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open('ECGAppDB'); 
+    const request = indexedDB.open('ECGAppDB');
 
     request.onupgradeneeded = (event) => {
       const db = event.target.result;
-      
+
+      // create all the object stores needed
       if (!db.objectStoreNames.contains('history')) {
         const historyStore = db.createObjectStore('history', { keyPath: 'uniqueId' });
         historyStore.createIndex('byDate', 'dateTime', { unique: false });
       }
-      
+
       if (!db.objectStoreNames.contains('identifiers')) {
         db.createObjectStore('identifiers', { keyPath: 'identifier' });
       }
-      
+
       if (!db.objectStoreNames.contains('images')) {
-        const imagesStore = db.createObjectStore('images', { keyPath: 'uniqueId' });
-        imagesStore.createIndex('byType', 'type', { unique: false }); 
+        db.createObjectStore('images', { keyPath: 'uniqueId' });
       }
-      
+
       if (!db.objectStoreNames.contains('classificationResults')) {
         db.createObjectStore('classificationResults', { keyPath: 'uniqueId' });
+      }
+
+      if (!db.objectStoreNames.contains('feedback')) {
+        db.createObjectStore('feedback', { keyPath: 'uniqueId' });
       }
     };
 
@@ -518,7 +521,7 @@ const ConfirmUpload = () => {
 
     if (!diagnosesResponse.ok) console.error("Failed to send diagnosis");
   };
- // this is to convert the image to base64(for storage purposes)
+  // this is to convert the image to base64(for storage purposes)
   const convertImageToBase64 = (img) => {
     return new Promise((resolve) => {
       const canvas = document.createElement("canvas");
@@ -607,9 +610,9 @@ const ConfirmUpload = () => {
           zIndex: 9999,
           color: "white"
         }}>
-          <CircularProgress size={80} thickness={4} sx={{ mb: 3, color: '#2196F3 !important'}} />
-          <Typography variant="h5" gutterBottom className="analyzing-text-blue">Analyzing ECG.. .</Typography>
-          <Typography variant="body1" className="analyzing-text-blue" >This may take a few moments</Typography>
+          <CircularProgress size={80} thickness={4} sx={{ mb: 3 }} />
+          <Typography variant="h5" gutterBottom>Analyzing ECG...</Typography>
+          <Typography variant="body1">This may take a few moments</Typography>
         </Box>
       )}
   
@@ -727,7 +730,7 @@ const ConfirmUpload = () => {
               value={gender}
               exclusive
               onChange={handleGenderChange}
-              sx={{ display: "flex", justifyContent: "center", "& .MuiToggleButton-root": {textTransform: "none", fontWeight: 600, "&.Mui-selected": {color: "white !important"}}}} >
+              sx={{ display: "flex", justifyContent: "center", "& .MuiToggleButton-root": {textTransform: "none", fontWeight: 600,"&.Mui-selected": {color: "white !important"}}}} >
               <ToggleButton
                 value="male"
                 selected={gender === "male"}

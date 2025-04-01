@@ -5,12 +5,12 @@ import { useNavigate } from "react-router-dom";
 // use indexeddb instead of localstorage
 const initializeDB = () => {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open('ECGAppDB');
+    const request = indexedDB.open('ECGAppDB'); 
 
     request.onupgradeneeded = (event) => {
       const db = event.target.result;
-
-      // create all the object stores needed 
+      
+      // create all the object stores needed
       if (!db.objectStoreNames.contains('history')) {
         const historyStore = db.createObjectStore('history', { keyPath: 'uniqueId' });
         historyStore.createIndex('byDate', 'dateTime', { unique: false });
@@ -26,6 +26,10 @@ const initializeDB = () => {
       
       if (!db.objectStoreNames.contains('classificationResults')) {
         db.createObjectStore('classificationResults', { keyPath: 'uniqueId' });
+      }
+      
+      if (!db.objectStoreNames.contains('feedback')) {
+        db.createObjectStore('feedback', { keyPath: 'uniqueId' });
       }
     };
 
@@ -275,15 +279,15 @@ const History = () => {
   };
 
   return (
-    <Grid container spacing={4} className="main-content"  justifyContent="center" alignItems="center" direction="column" sx={{minHeight: '100vh', py: 4, px: { xs: 2, sm: 4 }, backgroundColor: '#e1f1ff' }}>
-      <Grid item>
-        <Typography variant="h3" color="black" align="center" sx={{ fontWeight: "bold", mb: 4, mt: 4,  color: "text.primary"}}>
+    <Grid container spacing={4} className="main-content"  justifyContent="center" alignItems="center" direction="column" sx={{minHeight: '100vh', py: 4, px: { xs: 2, sm: 4 }, width: '100%', margin: '0 auto', maxWidth: '100%', overflowX: 'hidden', backgroundColor: 'background.default' }}>
+      <Grid item sx={{ width: '100%', textAlign: 'center' }}>
+        <Typography variant="h3" sx={{ fontWeight: "bold", mb: 4, mt: 4,  color: "text.primary"}}>
           History
         </Typography>
       </Grid>
 
       {/* Filters */}
-      <Grid container spacing={2} justifyContent="center" alignItems="center" sx={{ mb: 6, px:2 }}>
+      <Grid container spacing={2} justifyContent="center" alignItems="center" sx={{ mb: 6,  width: '100%', px: { xs: 2, sm: 3 }, }}>
         {/* Filter by Patient Status */}
         <Grid item xs={12} sm={6} md={3}>
           <FormControl fullWidth>
@@ -333,16 +337,16 @@ const History = () => {
         </Grid>
       </Grid>
 
-      <Grid container justifyContent="center" sx={{ mb: 6}}>
+      <Grid container justifyContent="center" sx={{ mb: 6, width: '100%'}}>
         <Button variant="contained" color="error" onClick={clearHistory} sx={{ px: 4, py:1.5 }}>
           Clear History
         </Button>
       </Grid>
 
       {/* History Cards */}
-      <Grid container spacing={4} sx={{ px: 4,  alignContent: "flex-start" }}>
+      <Grid container spacing={4} sx={{ width: '100%', margin: 0, justifyContent: 'center', px: { xs: 2, sm: 4 }}}>
         {filteredHistory.map((item, index) => (
-          <Grid item key={index} xs={12} sm={6} md={4} lg={3}>
+          <Grid item key={index} xs={11} sm={6} md={4} lg={3} sx={{ display: 'flex', justifyContent: 'center' }}>
             <Card sx={{ height: "100%", display: "flex", flexDirection: "column", transition: "transform 0.2s",'&:hover': {transform: "scale(1.02)", boxShadow: 6 }}}>
               <CardMedia
                 component="img"
@@ -350,7 +354,7 @@ const History = () => {
                 image={item.imageUrl || ""}
                 alt={`Uploaded image ${index + 1}`}
                 onClick={() => handleViewDetails(item)}
-                sx={{ cursor: "pointer", borderTopLeftRadius: 8, borderTopRightRadius: 8, objectFit: "cover"}}
+                sx={{ cursor: "pointer", borderTopLeftRadius: 8, borderTopRightRadius: 8, objectFit: "cover", maxWidth: '100%', height: 'auto', margin: '0 auto', display: 'block'}}
               />
               <CardContent sx={{ flexGrow: 1, p: 2 }}>
               <Box
@@ -401,7 +405,8 @@ const History = () => {
 
       {/* Image Details */}
       {selectedItem && (
-      <Dialog open={!!selectedItem} onClose={handleCloseDialog} maxWidth="md" fullWidth>
+      <Dialog open={!!selectedItem} onClose={handleCloseDialog} maxWidth="md" sx={{ '& .MuiDialog-paper': { width: { xs: '95%', sm: '80%', md: '60%' },margin: { xs: '16px', sm: '32px' },maxWidth: 'none' }
+      }}>
         <DialogTitle sx={{ bgcolor: "primary.main", color: "white",displau:"flex",justifyContent: "space-between", alignItems: "center" }}>
         <span>Patient Details</span>
         </DialogTitle>
@@ -464,8 +469,10 @@ const History = () => {
                   src={selectedItem.imageUrl || ""}
                   alt="Uploaded"
                   style={{
-                    maxWidth: "100%",
-                    maxHeight: "400px",
+                    maxWidth: '100%',
+                    height: 'auto',
+                    margin: '0 auto',
+                    display: 'block',
                     borderRadius: "8px",
                     border: "1px solid #e0e0e0",
                     boxShadow: 3,
@@ -504,8 +511,10 @@ const History = () => {
               <img
                 src={item.boundedBoxImageUrl || ""}
                 style={{ 
-                  maxWidth: "100%", 
-                  maxHeight: "400px",
+                  maxWidth: '100%',
+                  height: 'auto',
+                  margin: '0 auto',
+                  display: 'block',
                   objectFit: "contain"
                 }}
                 alt={`Bounded box ECG for ${item.identifier}`}

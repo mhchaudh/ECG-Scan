@@ -13,30 +13,33 @@ import "leaflet/dist/leaflet.css";
 import Fuse from 'fuse.js';
 import debounce from 'lodash.debounce';
 
-// use IndexedDB instead of localstorage
 const initializeDB = () => {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open('ECGAppDB'); 
+    const request = indexedDB.open('ECGAppDB');
 
     request.onupgradeneeded = (event) => {
       const db = event.target.result;
-      
+
+      // create all the object stores needed
       if (!db.objectStoreNames.contains('history')) {
         const historyStore = db.createObjectStore('history', { keyPath: 'uniqueId' });
         historyStore.createIndex('byDate', 'dateTime', { unique: false });
       }
-      
+
       if (!db.objectStoreNames.contains('identifiers')) {
         db.createObjectStore('identifiers', { keyPath: 'identifier' });
       }
-      
+
       if (!db.objectStoreNames.contains('images')) {
-        const imagesStore = db.createObjectStore('images', { keyPath: 'uniqueId' });
-        imagesStore.createIndex('byType', 'type', { unique: false }); // Add index for image type
+        db.createObjectStore('images', { keyPath: 'uniqueId' });
       }
-      
+
       if (!db.objectStoreNames.contains('classificationResults')) {
         db.createObjectStore('classificationResults', { keyPath: 'uniqueId' });
+      }
+
+      if (!db.objectStoreNames.contains('feedback')) {
+        db.createObjectStore('feedback', { keyPath: 'uniqueId' });
       }
     };
 
@@ -272,7 +275,7 @@ const Confirm = () => {
       image.onload = async () => {
         try {
           const imageBase64 = await convertImageToBase64(image);
-          
+
           // save the original image to indexeddb
           await saveImageToDB(uniqueId, imageBase64);
           
@@ -292,16 +295,25 @@ const Confirm = () => {
           if (uploadResponse.ok) {
             const uploadData = await uploadResponse.json();
             const filename = uploadData.filename;
-            const boundedBoxImage = uploadData.boundedboximage;
-  
-            // saved the boundedboximage to IndexedDB
-            if (boundedBoxImage) {
-              await saveBoundedBoxImageToDB(uniqueId, boundedBoxImage);
-            }
-  
+            
+            // Save both versions of the bounded box image
+            await Promise.all([
+              saveBoundedBoxImageToDB(
+                `${uniqueId}_bbox`, 
+                uploadData.boundedboximage, 
+                uploadData.boxes, 
+                'highlighted'
+              ),
+              saveBoundedBoxImageToDB(
+                `${uniqueId}_original`, 
+                uploadData.original_boundedbox, 
+                null, 
+                'original'
+              )
+            ]);
             // update history with filename(used to identify ecgs individually)
             await updateHistoryWithFilename(uniqueId, filename);
-            
+
             resolve(filename);
           } else {
             console.error("Upload failed");
@@ -315,9 +327,9 @@ const Confirm = () => {
     });
   };
   
-  const saveBoundedBoxImageToDB = async (uniqueId, imageData) => {
+  const saveBoundedBoxImageToDB = async (uniqueId, imageData, boxes, type) => {
     if (!db) throw new Error("Database not initialized");
-    
+
     // normalize the image data
     let processedImageData;
     try {
@@ -326,7 +338,7 @@ const Confirm = () => {
       processedImageData = imageData.startsWith('data:image') 
         ? imageData 
         : `data:image/png;base64,${imageData}`;
-        
+
       // validation(checking image format)
       if (!processedImageData.match(/^data:image\/(png|jpeg|jpg);base64,/)) {
         throw new Error("Invalid image format");
@@ -341,9 +353,10 @@ const Confirm = () => {
       const store = transaction.objectStore('images');
       
       const request = store.put({ 
-        uniqueId: `${uniqueId}_bbox`,
+        uniqueId,
         imageData: processedImageData,
-        type: 'bounded_box',
+        boxes: type === 'highlighted' ? boxes : null,
+        type,
         createdAt: new Date().toISOString()
       });
       
@@ -508,7 +521,7 @@ const Confirm = () => {
 
     if (!diagnosesResponse.ok) console.error("Failed to send diagnosis");
   };
- // this is to convert the image to base64(for storage purposes)
+  // this is to convert the image to base64(for storage purposes)
   const convertImageToBase64 = (img) => {
     return new Promise((resolve) => {
       const canvas = document.createElement("canvas");
@@ -597,11 +610,12 @@ const Confirm = () => {
           zIndex: 9999,
           color: "white"
         }}>
-          <CircularProgress size={80} thickness={4} sx={{ mb: 3, color: '#2196F3 !important'}} />
-          <Typography variant="h5" gutterBottom className="analyzing-text-blue">Analyzing ECG.. .</Typography>
-          <Typography variant="body1" className="analyzing-text-blue" >This may take a few moments</Typography>
+          <CircularProgress size={80} thickness={4} sx={{ mb: 3 }} />
+          <Typography variant="h5" gutterBottom>Analyzing ECG...</Typography>
+          <Typography variant="body1">This may take a few moments</Typography>
         </Box>
       )}
+  
       <Grid container spacing={3} justifyContent="center" alignItems="center" direction="column">
         <Grid item>
           <Typography variant="h4" color="black">
