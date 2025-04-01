@@ -619,7 +619,7 @@ const Confirm = () => {
               variant="outlined"
               value={identifier}
               onChange={handleIdentifierChange}
-              sx={{ width: 300, backgroundColor: "background.paper",
+              sx={{ width: 300, backgroundColor: "#e1f1ff",
                 "& .MuiOutlinedInput-root": {
                   borderRadius: "12px"
                 }}}

@@ -275,7 +275,7 @@ const History = () => {
   };
 
   return (
-    <Grid container spacing={4} className="main-content"  justifyContent="center" alignItems="center" direction="column" sx={{minHeight: '100vh', py: 4, px: { xs: 2, sm: 4 }, backgroundColor: 'background.default' }}>
+    <Grid container spacing={4} className="main-content"  justifyContent="center" alignItems="center" direction="column" sx={{minHeight: '100vh', py: 4, px: { xs: 2, sm: 4 }, backgroundColor: '#e1f1ff' }}>
       <Grid item>
         <Typography variant="h3" color="black" align="center" sx={{ fontWeight: "bold", mb: 4, mt: 4,  color: "text.primary"}}>
           History

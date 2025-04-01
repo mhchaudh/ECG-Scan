@@ -171,7 +171,7 @@ const Home = () => {
                 style={{ display: "none" }}
                 onChange={handleFileInputChange}
               />
-              <div {...getRootProps()} style={{ textAlign: 'center', border: isDragActive ? '2px dashed #2196F3' : '2px dashed #ccc', padding: '20px', borderRadius: '4px', cursor: 'pointer' }}>
+              <div {...getRootProps()} style={{ textAlign: 'center', border: 'none', padding: '20px', borderRadius: '4px', cursor: 'pointer' }}>
                 <input {...getInputProps()} />
                 {isDragActive ? (
                   <Typography variant="h6" color="primary">Drop the image here...</Typography>

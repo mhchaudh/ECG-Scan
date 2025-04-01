@@ -630,7 +630,7 @@ const ConfirmUpload = () => {
               variant="outlined"
               value={identifier}
               onChange={handleIdentifierChange}
-              sx={{ width: 300, backgroundColor: "background.paper",
+              sx={{ width: 300, backgroundColor: "#e1f1ff",
                 "& .MuiOutlinedInput-root": {
                   borderRadius: "12px"
                 }}}
@@ -727,7 +727,7 @@ const ConfirmUpload = () => {
               value={gender}
               exclusive
               onChange={handleGenderChange}
-              sx={{ display: "flex", justifyContent: "center", "& .MuiToggleButton-root": {textTransform: "none", fontWeight: 600,"&.Mui-selected": {color: "white !important"}}}} >
+              sx={{ display: "flex", justifyContent: "center", "& .MuiToggleButton-root": {textTransform: "none", fontWeight: 600, "&.Mui-selected": {color: "white !important"}}}} >
               <ToggleButton
                 value="male"
                 selected={gender === "male"}
