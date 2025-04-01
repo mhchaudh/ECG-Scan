@@ -2,7 +2,7 @@ import { Builder, By, until } from "selenium-webdriver";
 import chrome from "selenium-webdriver/chrome.js";
 import path from "path";
 import { fileURLToPath } from "url";
-import fs from "fs";  // Add fs to check if the file exists
+import fs from "fs";
 
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -37,14 +37,14 @@ const __dirname = path.dirname(__filename);
         await uploadButton.click();
         await sleep(1000);
 
-        console.log("Uploading test.png...");
+        console.log("Uploading test.jpg...");
         let fileInput = await driver.wait(until.elementLocated(By.xpath("//input[@type='file']")), 5000).catch((error) => {
             console.error("Failed to find file input field:", error);
             throw new Error("File input field not found");
         });
 
         // Update file path to look in test_images folder
-        let filePath = path.resolve(__dirname, "test_images", "test.png");
+        let filePath = path.resolve(__dirname, "test_images", "test.jpg");
         if (!fs.existsSync(filePath)) {
             console.error("Test image file does not exist at:", filePath);
             throw new Error("Test image file not found");
@@ -141,10 +141,80 @@ const __dirname = path.dirname(__filename);
         });
         console.log("Successfully navigated to result page.");
 
-        console.log("Waiting for 10 seconds after navigating to result page...");
-        await sleep(10000);
+        // NEW TESTS FOR ECG RESULTS PAGE
 
-        console.log("Test passed successfully!");
+        console.log("Starting ECG Results page tests...");
+        await sleep(2000);
+
+        // Test 1: Click on color box and verify dialog appears
+        console.log("Testing color box interaction...");
+        let colorBoxes = await driver.wait(until.elementsLocated(By.css(".color-box-force")), 5000);
+        if (colorBoxes.length === 0) {
+            throw new Error("No color boxes found on the page");
+        }
+
+        console.log(`Found ${colorBoxes.length} color boxes. Clicking the first one...`);
+        await colorBoxes[0].click();
+        await sleep(1000);
+
+        console.log("Checking if color dialog appears...");
+        let colorDialog = await driver.wait(until.elementLocated(By.css(".MuiDialog-root")), 5000).catch((error) => {
+            console.error("Color dialog did not appear:", error);
+            throw new Error("Color dialog not shown after clicking color box");
+        });
+
+        console.log("Color dialog appeared successfully. Closing it...");
+        let closeButton = await driver.findElement(By.xpath("//div[contains(@class, 'MuiDialog-root')]//button[contains(text(), 'Close')]"));
+        await closeButton.click();
+        await sleep(1000);
+
+        // Test 2: Submit feedback and verify it's displayed
+        console.log("Testing feedback submission...");
+        
+        // Check if feedback is already submitted (in case of test reruns)
+        let feedbackText;
+        try {
+            feedbackText = await driver.findElement(By.xpath("//*[contains(text(), 'Your feedback:')]"));
+            console.log("Feedback already submitted, skipping test");
+        } catch (e) {
+            // Feedback not submitted yet, proceed with test
+            console.log("Selecting 'Yes' feedback option...");
+            let yesRadio = await driver.wait(until.elementLocated(By.xpath("//input[@value='Yes']/..")), 5000);
+            await yesRadio.click();
+            await sleep(500);
+
+           // Replace the feedback verification section with this improved version:
+
+            console.log("Submitting feedback...");
+            let submitButton = await driver.findElement(By.xpath("//button[contains(text(), 'Submit Feedback')]"));
+            await submitButton.click();
+
+            // Add more robust waiting for the feedback to appear
+            console.log("Waiting for feedback to be processed...");
+            try {
+                // Wait first for the submit button to disappear (indicating submission started)
+                await driver.wait(until.stalenessOf(submitButton), 10000);
+                
+                // Then wait for the feedback text to appear with more flexible matching
+                feedbackText = await driver.wait(until.elementLocated(By.xpath("//*[contains(translate(., 'YES', 'yes'), 'your feedback: yes')]")), 10000);
+                
+                console.log("Feedback text found:", await feedbackText.getText());
+            } catch (error) {
+                // Debug what's actually on the page
+                let pageSource = await driver.getPageSource();
+                console.log("Current page content:", pageSource);
+                throw new Error("Feedback submission not reflected on page: " + error.message);
+            }
+
+            console.log("Feedback submitted and displayed successfully");
+        }
+
+        console.log("All ECG Results page tests passed!");
+
+        console.log("Waiting for 5 seconds before finishing...");
+        await sleep(5000);
+
+        console.log("All tests passed successfully!");
 
     } catch (error) {
         console.error("Test failed:", error);
