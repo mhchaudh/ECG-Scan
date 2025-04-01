@@ -82,6 +82,11 @@ function App() {
         anchorEl={dropdownOpen}
         open={Boolean(dropdownOpen)}
         onClose={() => setDropdownOpen(null)}
+        sx={{
+          '& .MuiPaper-root': {
+            backgroundColor: '#e1f1ff', 
+          },
+        }}
       >
         <MenuItem onClick={() => navigate("/home")} className="menu-item">Home</MenuItem>
         <MenuItem onClick={() => navigate("/about")} className="menu-item">About</MenuItem>
