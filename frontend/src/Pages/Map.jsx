@@ -87,7 +87,7 @@ const Map = () => {
         position: "absolute",
         top: 8,
         left: 16,
-        zIndex: 10000,
+        zIndex: 1000,
         backgroundColor: "background.paper",
         borderRadius: 1,
         boxShadow: 3,
@@ -104,12 +104,12 @@ const Map = () => {
             label="Filter by Diagnosis"
             MenuProps={{
               style: {
-                zIndex: 10001
+                zIndex: 1100
               },
               PaperProps: {
                 style: {
                   maxHeight: 300,
-                  zIndex: 10001
+                  zIndex: 1100
                 }
               }
             }}
