@@ -135,11 +135,12 @@ const Home = () => {
         </DialogActions>
       </Dialog>
 
-      <Grid container spacing={3} justifyContent="center" alignItems="center" direction="column" style={{ height: '100vh', padding: '0 24px', maxWidth: '600px',  margin: '0 auto' }}>
+      <Grid container spacing={3} justifyContent="center" alignItems="center" direction="column" 
+  sx={{ minHeight: '100vh', width: '100%', padding: { xs: '10px', md: '0 24px' }, maxWidth: '600px', margin: '0 auto' }}>
         {!isCameraOpen ? (
           <>
             <Grid item>
-              <img 
+            <img 
                 src={logo}
                 alt="ECGenius Logo" 
                 style={{ height: '200px', marginBottom: '16px',
@@ -149,6 +150,7 @@ const Home = () => {
                   }
                 }} 
               />
+
             </Grid>
             <Grid item>
               <Typography variant="h4" color="black" align="center" style={{ fontWeight: 'bold', marginBottom: '20px', fontFamily: 'Monaco' }}>
@@ -156,12 +158,21 @@ const Home = () => {
               </Typography>
             </Grid>
             <Grid item>
-              <Button 
-                sx={{ backgroundColor: "#4CAF50", color: "white", "&:hover": { backgroundColor: "#388E3C" }, padding: "20px 46px",  
-                fontSize: "1.5rem", height: "80px", minWidth: "250px", fontFamily: 'Monaco' }}
-                variant="contained" color="primary" startIcon={<PhotoCamera />} onClick={handleTakePictureClick}>
-                Open Camera
-              </Button>
+            <Button 
+              sx={{ 
+                backgroundColor: "#4CAF50", 
+                color: "white", 
+                "&:hover": { backgroundColor: "#388E3C" }, 
+                padding: { xs: "12px 24px", md: "20px 46px" }, 
+                fontSize: { xs: "1rem", md: "1.5rem" }, 
+                height: { xs: "60px", md: "80px" }, 
+                width: "100%", 
+                maxWidth: "300px", 
+                fontFamily: 'Monaco' 
+              }}
+              variant="contained" color="primary" startIcon={<PhotoCamera />} onClick={handleTakePictureClick}>
+              Open Camera
+            </Button>
             </Grid>
             <Grid item>
               <input
@@ -171,14 +182,15 @@ const Home = () => {
                 style={{ display: "none" }}
                 onChange={handleFileInputChange}
               />
-              <div {...getRootProps()} style={{ textAlign: 'center', border: 'none', padding: '20px', borderRadius: '4px', cursor: 'pointer' }}>
-                <input {...getInputProps()} />
+              <div {...getRootProps()} style={{ textAlign: 'center', padding: '16px', borderRadius: '4px', cursor: 'pointer', width: "100%", maxWidth: "400px", margin: "auto"}}>               
+               <input {...getInputProps()} />
                 {isDragActive ? (
                   <Typography variant="h6" color="primary">Drop the image here...</Typography>
                 ) : (
                   <Button 
-                    sx={{ backgroundColor: "#2196F3", color: "white", "&:hover": { backgroundColor: "#1976D2" }, padding: "20px 40px",  
-                    fontSize: "1.5rem", height: "80px", minWidth: "250px", fontFamily: 'Monaco' }}
+                    sx={{ backgroundColor: "#2196F3", color: "white", "&:hover": { backgroundColor: "#1976D2" }, padding: { xs: "12px 24px", md: "20px 46px" }, 
+                    fontSize: { xs: "1rem", md: "1.5rem" },  height: { xs: "60px", md: "80px" }, width: "100%", maxWidth: "300px", 
+fontFamily: 'Monaco'  }}
                     variant="contained" color="secondary" startIcon={<CloudUpload />}>
                     Upload Image
                   </Button>
