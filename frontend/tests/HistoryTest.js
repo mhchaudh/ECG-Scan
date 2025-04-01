@@ -96,21 +96,22 @@ const __dirname = path.dirname(__filename);
     await confirmButton.click();
 
     console.log("Handling confirmation popup...");
-    let yesButton = await driver.findElement(By.xpath("//button[contains(text(), 'Confirm')]"));
-    await driver.wait(
-      until.elementIsVisible(yesButton),
-      5000
-    );
-    
-    await driver.wait(
-      until.elementIsEnabled(yesButton),
-      5000);
-    
-    await yesButton.click();
+    let confirmPopupButton = await driver.wait(
+        until.elementLocated(By.xpath("//div[contains(@class, 'MuiDialog-root')]//button[contains(text(), 'Confirm')]")),
+        5000
+    ).catch((error) => {
+        console.error("Failed to find Confirm button in popup:", error);
+        throw new Error("Confirm button not found in confirmation popup");
+    });
+    await driver.sleep(1000);
+    await confirmPopupButton.click();
 
     console.log("Waiting for diagnosis and navigation to result page...");
     await driver.wait(until.urlContains("/ecg-results"), 30000); // Increased wait time to 30 seconds
     console.log("Successfully navigated to result page.");
+
+    console.log("Staying on the result page for 5 seconds...");
+    await driver.sleep(5000);
 
     // Navigate to home page by clicking the logo in the top left
     console.log("Navigating to home page...");
