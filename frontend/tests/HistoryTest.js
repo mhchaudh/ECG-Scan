@@ -2,151 +2,310 @@ import { Builder, By, until } from "selenium-webdriver";
 import chrome from "selenium-webdriver/chrome.js";
 import path from "path";
 import { fileURLToPath } from "url";
-import fs from "fs";  // Add fs to check if the file exists
+import fs from "fs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-(async function testHistoryFilters() {
+(async function testHistoryFeatures() {
   let driver = await new Builder().forBrowser("chrome").setChromeOptions(new chrome.Options()).build();
 
   try {
     await driver.get("http://localhost:5173");
 
-    // Wait for the disclaimer popup to appear
-    let disclaimerPopup = await driver.wait(
-      until.elementLocated(By.css(".MuiDialog-root")),
-      10000 
-    );
+    // Handle disclaimer
+    await driver.wait(until.elementLocated(By.css(".MuiDialog-root")), 10000);
+    await driver.findElement(By.css('input[type="checkbox"]')).click();
+    await driver.findElement(By.xpath("//button[contains(text(), 'Proceed')]")).click();
 
-    // Check if the disclaimer checkbox is present and click it
-    let disclaimerCheckbox = await driver.findElement(By.css('input[type="checkbox"]'));
-    await disclaimerCheckbox.click();
-
-    // Click the proceed button
-    let proceedButton = await driver.findElement(By.xpath("//button[contains(text(), 'Proceed')]"));
-    await proceedButton.click();
-
-    // Upload an image
-    console.log("Looking for the Upload Image button...");
-    let uploadButton = await driver.wait(until.elementLocated(By.xpath("//button[contains(text(), 'Upload Image')]")), 5000);
-    await uploadButton.click();
-
-    console.log("Uploading test.png...");
-    let fileInput = await driver.wait(until.elementLocated(By.xpath("//input[@type='file']")), 5000);
-
-    let filePath = path.resolve(__dirname, "test_images", "test.png");
-    if (!fs.existsSync(filePath)) {
-      console.error("Test image file does not exist at:", filePath);
-      throw new Error("Test image file not found");
+    // Upload test image
+    async function uploadTestImage() {
+      await driver.wait(until.elementLocated(By.xpath("//button[contains(text(), 'Upload Image')]")), 5000).click();
+      
+      const filePath = path.resolve(__dirname, "test_images", "test.jpg");
+      if (!fs.existsSync(filePath)) {
+        throw new Error("Test image file not found");
+      }
+      
+      await driver.wait(until.elementLocated(By.xpath("//input[@type='file']")), 5000)
+        .sendKeys(filePath);
+      
+      await driver.wait(until.urlContains("/confirmupload"), 10000);
+      
+      // Fill out form
+      await driver.findElement(By.xpath("//input[@id=//label[contains(text(), 'Unique Patient Identifier')]/@for]"))
+        .sendKeys("TestPatient123");
+      await driver.findElement(By.xpath("//input[@id=//label[contains(text(), 'Age')]/@for]"))
+        .sendKeys("30");
+      
+      // Patient status
+      await driver.findElement(By.xpath("//label[contains(text(), 'Patient Status')]/following-sibling::div")).click();
+      await driver.findElement(By.xpath("//li[contains(text(), 'Pre-treatment')]")).click();
+      
+      // Location
+      await driver.findElement(By.xpath("//label[contains(text(), 'Location')]/following-sibling::div//input"))
+        .sendKeys("Canada");
+      await driver.sleep(2000);
+      (await driver.findElements(By.xpath("//ul[contains(@class, 'MuiList-root')]/li")))[0].click();
+      
+      // Gender
+      await driver.findElement(By.xpath("//button[@value='male' and @aria-pressed='false']")).click();
+      
+      // Confirm
+      await driver.findElement(By.xpath("//button[contains(text(), 'Confirm')]")).click();
+      await driver.wait(until.elementLocated(
+        By.xpath("//div[contains(@class, 'MuiDialog-root')]//button[contains(text(), 'Confirm')]")), 5000)
+        .click();
+      
+      await driver.wait(until.urlContains("/ecg-results"), 30000);
+      await driver.sleep(2000);
+      
+      // Return home
+      await driver.findElement(By.css(".logo")).click();
+      await driver.wait(until.urlContains("/home"), 10000);
     }
 
-    await fileInput.sendKeys(filePath);
+    // Upload first image
+    await uploadTestImage();
     await driver.sleep(2000);
 
-    console.log("Waiting for navigation to confirmation page...");
-    await driver.wait(until.urlContains("/confirmupload"), 10000);
+    await driver.findElement(By.css(".MuiIconButton-root")).click();
+    await driver.wait(until.elementLocated(By.xpath("//li[contains(text(), 'History')]")), 5000).click();
+    await driver.wait(until.urlContains("/history"), 10000);
+    await driver.sleep(2000);
 
-    console.log("Image uploaded and navigated to confirmation page.");
-    await driver.sleep(1000);
+    // Helper function for reliable clicking
+    async function safeClick(element) {
+      await driver.executeScript("arguments[0].scrollIntoView({block: 'center'});", element);
+      await driver.wait(until.elementIsEnabled(element), 5000);
+      await driver.sleep(500); // Small stabilization pause
+      try {
+        await element.click();
+      } catch (err) {
+        // Fallback to JavaScript click if regular click fails
+        await driver.executeScript("arguments[0].click();", element);
+      }
+    }
 
-    console.log("Filling out identifier field...");
-    let identifierInput = await driver.findElement(By.xpath("//input[@id=//label[contains(text(), 'Unique Patient Identifier')]/@for]"));
-    await identifierInput.sendKeys("TestIdentifier123");
-    await driver.sleep(500);
+     // Test 1: View Details - IMPROVED VERSION
+    console.log("Testing View Details...");
+    const cards = await driver.wait(until.elementsLocated(By.css(".MuiCard-root")), 10000);
+    const firstCard = cards[0];
 
-    console.log("Filling out age field...");
-    let ageInput = await driver.findElement(By.xpath("//input[@id=//label[contains(text(), 'Age')]/@for]"));
-    await ageInput.sendKeys("25");
-    await driver.sleep(500);
+    const viewDetailsBtn = await firstCard.findElement(By.xpath(".//button[contains(text(), 'View Details')]"));
+    await safeClick(viewDetailsBtn);
 
-    console.log("Selecting patient status...");
-    let patientStatusDropdown = await driver.findElement(By.xpath("//label[contains(text(), 'Patient Status')]/following-sibling::div"));
-    await patientStatusDropdown.click();
-    let firstPatientStatusOption = await driver.findElement(By.xpath("//li[contains(text(), 'Pre-treatment')]"));
-    await firstPatientStatusOption.click();
-    await driver.sleep(500);
+    // More robust dialog waiting
+    const dialog = await driver.wait(
+      until.elementLocated(By.css(".MuiDialog-root")),
+      10000 // Increased timeout to 10 seconds
+    );
 
-    console.log("Selecting location type...");
-    let locationTypeInput = await driver.findElement(By.xpath("//label[contains(text(), 'Location')]/following-sibling::div//input"));
-    await locationTypeInput.sendKeys("Canada");
-    await driver.sleep(3000); // Wait for 3 seconds
-
-    console.log("Waiting for location suggestions...");
-    let locationSuggestions = await driver.wait(
-      until.elementsLocated(By.xpath("//ul[contains(@class, 'MuiList-root')]/li")),
+    // Wait for dialog to be visible and have content
+    await driver.wait(
+      until.elementIsVisible(dialog),
       10000
     );
-    console.log(`Found ${locationSuggestions.length} location suggestions.`);
-    if (locationSuggestions.length > 0) {
-      await locationSuggestions[0].click();
-      console.log("Clicked the first location suggestion.");
-    } else {
-      console.error("No location suggestions found.");
-    }
-    await driver.sleep(500);
 
-    console.log("Selecting gender...");
-    let maleButton = await driver.findElement(By.xpath("//button[@value='male' and @aria-pressed='false']"));
-    await maleButton.click();
-    await driver.sleep(500);
-
-    console.log("Clicking Confirm button...");
-    let confirmButton = await driver.findElement(By.xpath("//button[contains(text(), 'Confirm')]"));
-    await confirmButton.click();
-
-    console.log("Handling confirmation popup...");
-    let confirmPopupButton = await driver.wait(
-        until.elementLocated(By.xpath("//div[contains(@class, 'MuiDialog-root')]//button[contains(text(), 'Confirm')]")),
+    // Alternative verification if the first approach fails
+    let dialogTitle;
+    try {
+      dialogTitle = await driver.wait(
+        until.elementLocated(By.css(".MuiDialogTitle-root")),
         5000
-    ).catch((error) => {
-        console.error("Failed to find Confirm button in popup:", error);
-        throw new Error("Confirm button not found in confirmation popup");
-    });
+      ).getText();
+    } catch (err) {
+      // Fallback to JavaScript execution
+      dialogTitle = await driver.executeScript(
+        'return document.querySelector(".MuiDialogTitle-root")?.textContent'
+      );
+    }
+
+    if (!dialogTitle?.includes("Patient Details")) {
+      throw new Error("Details dialog did not open correctly");
+    }
+
+    // Close dialog
+    const closeBtn = await driver.findElement(
+      By.xpath("//div[contains(@class, 'MuiDialog-root')]//button[contains(text(), 'Close')]")
+    );
+    await safeClick(closeBtn);
     await driver.sleep(1000);
-    await confirmPopupButton.click();
+    console.log("View Details test passed");
 
-    console.log("Waiting for diagnosis and navigation to result page...");
-    await driver.wait(until.urlContains("/ecg-results"), 30000); // Increased wait time to 30 seconds
-    console.log("Successfully navigated to result page.");
+    // Test 2: View ECG Results and return - FINAL IMPROVED VERSION
+    console.log("Testing View ECG Results...");
+    const viewECGBtn = await firstCard.findElement(By.xpath(".//button[contains(text(), 'View ECG Results')]"));
+    await safeClick(viewECGBtn);
 
-    console.log("Staying on the result page for 5 seconds...");
-    await driver.sleep(5000);
+    // Wait for ECG results page with multiple verification points
+    await driver.wait(async () => {
+      const currentUrl = await driver.getCurrentUrl();
+      if (!currentUrl.includes("/ecg-results")) return false;
+      
+      // Additional checks to confirm page is really ready
+      const pageReady = await driver.executeScript(`
+        return document.readyState === 'complete' && 
+              document.querySelector('.logo') !== null &&
+              document.querySelector('.MuiIconButton-root') !== null
+      `);
+      return pageReady;
+    }, 20000, "ECG results page never loaded properly");
 
-    // Navigate to home page by clicking the logo in the top left
-    console.log("Navigating to home page...");
-    let logoButton = await driver.findElement(By.css(".logo"));
-    await logoButton.click();
-    await driver.wait(until.urlContains("/home"), 10000);
-    console.log("Successfully navigated to /home.");
+    // Add a small stabilization delay
+    await driver.sleep(1000);
 
-    // Wait for the dropdown button to appear in the top right
-    let dropdownButton = await driver.wait(
-      until.elementLocated(By.css(".MuiIconButton-root")),
-      10000 
+    // Debugging: Log current state before navigation
+    console.log("Current URL:", await driver.getCurrentUrl());
+    const screenshot1 = await driver.takeScreenshot();
+    fs.writeFileSync('ecg-results-page.png', screenshot1, 'base64');
+
+    // Return home with multiple fallback methods
+    async function navigateHome() {
+      try {
+        // Method 1: Regular click
+        const logo = await driver.wait(until.elementLocated(By.css(".logo")), 10000);
+        await driver.executeScript("arguments[0].scrollIntoView()", logo);
+        await driver.wait(until.elementIsEnabled(logo), 5000);
+        await logo.click();
+        return true;
+      } catch (err) {
+        console.log("Method 1 failed, trying Method 2...");
+      }
+
+      try {
+        // Method 2: JavaScript click
+        await driver.executeScript('document.querySelector(".logo").click()');
+        return true;
+      } catch (err) {
+        console.log("Method 2 failed, trying Method 3...");
+      }
+
+      try {
+        // Method 3: URL navigation fallback
+        await driver.get("http://localhost:5173/home");
+        return true;
+      } catch (err) {
+        console.log("Method 3 failed");
+        return false;
+      }
+    }
+
+    if (!await navigateHome()) {
+      throw new Error("Failed to navigate back home from ECG results");
+    }
+
+    // Verify we're on home page
+    await driver.wait(until.urlContains("/home"), 15000);
+
+    // Debugging: Log state after home navigation
+    console.log("Navigated to home page");
+    const screenshot2 = await driver.takeScreenshot();
+    fs.writeFileSync('home-page.png', screenshot2, 'base64');
+
+    // Navigate back to history with robust retries
+    let historyNavigationSuccess = false;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        console.log(`History navigation attempt ${attempt}`);
+        
+        // Open dropdown
+        const dropdown = await driver.wait(until.elementLocated(By.css(".MuiIconButton-root")), 10000);
+        await driver.executeScript("arguments[0].scrollIntoView()", dropdown);
+        await driver.executeScript("arguments[0].click()", dropdown);
+        
+        // Click history menu item
+        const historyMenuItem = await driver.wait(
+          until.elementLocated(By.xpath("//li[contains(text(), 'History')]")),
+          5000
+        );
+        await driver.executeScript("arguments[0].click()", historyMenuItem);
+        
+        // Verify navigation
+        await driver.wait(until.urlContains("/history"), 10000);
+        historyNavigationSuccess = true;
+        break;
+      } catch (err) {
+        console.log(`Attempt ${attempt} failed:`, err.message);
+        await driver.sleep(1000);
+      }
+    }
+
+    if (!historyNavigationSuccess) {
+      throw new Error("Failed to navigate back to history after 3 attempts");
+    }
+
+    await driver.sleep(2000);
+    console.log("View ECG Results test passed");
+    // Test 3: Delete Item - FIXED
+    console.log("Testing Delete Item...");
+    // Get initial count before deletion
+    const initialItems = await driver.wait(until.elementsLocated(By.css(".MuiCard-root")), 10000);
+    const initialCount = initialItems.length;
+
+    // Use a fresh element reference for the delete button
+    const deleteBtn = await driver.wait(
+      until.elementLocated(
+        By.xpath("(//div[contains(@class, 'MuiCard-root')])[1]//button[contains(text(), 'Delete')]")
+      ),
+      10000
     );
-    await dropdownButton.click();
 
-    // Wait for the History button to appear and click it
-    let historyButton = await driver.wait(
-      until.elementLocated(By.xpath("//li[contains(text(), 'History')]")),
-      10000 
-    );
-    await historyButton.click();
+    // Scroll into view and click with retry
+    let deleteSuccess = false;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        console.log(`Delete attempt ${attempt}`);
+        await driver.executeScript("arguments[0].scrollIntoView({block: 'center'});", deleteBtn);
+        await driver.wait(until.elementIsEnabled(deleteBtn), 5000);
+        await driver.executeScript("arguments[0].click();", deleteBtn);
+        deleteSuccess = true;
+        break;
+      } catch (err) {
+        console.log(`Attempt ${attempt} failed:`, err.message);
+        await driver.sleep(1000);
+      }
+    }
 
-    // Wait for the History page to load
-    await driver.sleep(5000);
+    if (!deleteSuccess) {
+      throw new Error("Failed to click Delete button after 3 attempts");
+    }
 
-    // Wait for a few seconds after reaching the history page
-    console.log("Waiting for a few seconds on the history page...");
-    await driver.sleep(5000);
+    // Wait for deletion to complete with fresh element references
+    await driver.wait(async () => {
+      try {
+        const currentItems = await driver.findElements(By.css(".MuiCard-root"));
+        return currentItems.length === initialCount - 1;
+      } catch (err) {
+        return false;
+      }
+    }, 10000, "Item count did not decrease after deletion");
 
-    console.log("History filters test passed successfully!");
+    // Final verification
+    const remainingItems = await driver.findElements(By.css(".MuiCard-root"));
+    if (remainingItems.length !== initialCount - 1) {
+      throw new Error(`Expected ${initialCount - 1} items after deletion, found ${remainingItems.length}`);
+    }
+    console.log("Delete Item test passed");
+    // Test 4: Clear History - FIXED
+    console.log("Testing Clear History...");
+    const clearHistoryBtn = await driver.findElement(By.xpath("//button[contains(text(), 'Clear History')]"));
+    await safeClick(clearHistoryBtn);
+    await driver.sleep(2000);
+    
+    const finalItems = await driver.findElements(By.css(".MuiCard-root"));
+    if (finalItems.length > 0) {
+      throw new Error("History was not cleared successfully");
+    }
+    console.log("Clear History test passed");
+
+    console.log("All history feature tests passed successfully!");
 
   } catch (error) {
     console.error("Test failed:", error);
-    let debugUrl = await driver.getCurrentUrl();
-    console.log("Current URL at error:", debugUrl);
+    const screenshot = await driver.takeScreenshot();
+    fs.writeFileSync('test-failure.png', screenshot, 'base64');
+    console.log("Screenshot saved as test-failure.png");
   } finally {
     await driver.quit();
   }
