@@ -73,7 +73,15 @@ body.dark-mode {
 }
 
 .app-bar {
-  background-color: #3f51b5 !important;
+  background: linear-gradient(105deg, #185d68 0%, #247b80 100%) !important;
+  box-shadow: 0 3px 14px rgba(20, 63, 75, 0.24) !important;
+  min-height: 64px;
+}
+
+.app-bar .MuiToolbar-root {
+  min-height: 64px;
+  padding-left: 18px;
+  padding-right: 18px;
 }
 
 .dark-mode .app-bar {
@@ -82,16 +90,22 @@ body.dark-mode {
 
 .logo {
   cursor: pointer;
-  height: 50px;
-  margin-right: 3px;
-  margin-left: -15px;
+  height: 46px;
+  margin-right: 8px;
+  margin-left: -8px;
+  transition: transform 0.2s ease;
+}
+
+.logo:hover {
+  transform: scale(1.04);
 }
 
 .app-title {
   cursor: pointer;
-  font-family: 'Monaco, monospace';
+  font-family: "Avenir Next", "Helvetica Neue", sans-serif !important;
   font-weight: bolder;
-  font-size: 2rem;
+  font-size: 1.55rem !important;
+  letter-spacing: 0.02em;
 }
 
 .main-content {

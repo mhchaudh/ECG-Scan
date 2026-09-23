@@ -135,7 +135,7 @@ const Home = () => {
         </DialogActions>
       </Dialog>
 
-      <Grid container spacing={3} justifyContent="center" alignItems="center" direction="column" 
+      <Grid container className="home-page" spacing={3} justifyContent="center" alignItems="center" direction="column"
   sx={{ minHeight: '100vh', width: '100%', padding: { xs: '10px', md: '0 24px' }, maxWidth: '600px', margin: '0 auto' }}>
         {!isCameraOpen ? (
           <>
@@ -153,7 +153,7 @@ const Home = () => {
 
             </Grid>
             <Grid item>
-              <Typography variant="h4" color="black" align="center" style={{ fontWeight: 'bold', marginBottom: '20px', fontFamily: 'Monaco' }}>
+              <Typography variant="h4" color="black" align="center" style={{ fontWeight: 'bold', marginBottom: '20px', fontFamily: 'Avenir Next, Helvetica Neue, sans-serif' }}>
                 Take or Upload ECG Report
               </Typography>
             </Grid>
@@ -168,7 +168,7 @@ const Home = () => {
                 height: { xs: "60px", md: "80px" }, 
                 width: "100%", 
                 maxWidth: "300px", 
-                fontFamily: 'Monaco' 
+                fontFamily: 'Avenir Next, Helvetica Neue, sans-serif'
               }}
               variant="contained" color="primary" startIcon={<PhotoCamera />} onClick={handleTakePictureClick}>
               Open Camera
@@ -190,7 +190,7 @@ const Home = () => {
                   <Button 
                     sx={{ backgroundColor: "#2196F3", color: "white", "&:hover": { backgroundColor: "#1976D2" }, padding: { xs: "12px 24px", md: "20px 46px" }, 
                     fontSize: { xs: "1rem", md: "1.5rem" },  height: { xs: "60px", md: "80px" }, width: "100%", maxWidth: "300px", 
-fontFamily: 'Monaco'  }}
+fontFamily: 'Avenir Next, Helvetica Neue, sans-serif'  }}
                     variant="contained" color="secondary" startIcon={<CloudUpload />}>
                     Upload Image
                   </Button>
