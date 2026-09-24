@@ -70,22 +70,3 @@ npm run dev
 
 Now the web app should be running locally and accessible via your browser
 
-### Vercel Deployment
-
-The repository includes a Vercel configuration that builds the React app and
-routes `/api/*` to the Flask function in `api/index.py`. Import the repository
-into Vercel with the repository root as the project root. Do not set a
-`VITE_API_URL` environment variable for the combined deployment; the frontend
-will use the same-origin `/api` routes. Keep `VITE_API_URL` set to the backend
-URL when running the frontend separately.
-
-Set `DATABASE_URL` in Vercel to a hosted PostgreSQL database. SQLite under
-`/tmp` is only a temporary fallback and is cleared between serverless
-instances.
-
-Important: the image-processing endpoint runs PyTorch/YOLO and writes several
-temporary files. Vercel may reject this dependency bundle or time out while
-running inference. If that happens, deploy the frontend to Vercel and run the
-Python API on a long-running service such as Render, Railway, or Fly.io; set
-`VITE_API_URL` to that API URL.
-

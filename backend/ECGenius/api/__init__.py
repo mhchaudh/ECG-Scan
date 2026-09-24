@@ -1,5 +1,3 @@
-import os
-
 from flask import Flask
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
@@ -10,10 +8,7 @@ db = SQLAlchemy()
 
 def create_app():
     app = Flask(__name__)
-    database_url = os.getenv('DATABASE_URL')
-    if not database_url and os.getenv('VERCEL'):
-        database_url = 'sqlite:////tmp/ecgdata.db'
-    app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'sqlite:///ecgdata.db'
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///ecgdata.db'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     db.init_app(app)
     migrate = Migrate(app, db)

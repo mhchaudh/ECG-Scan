@@ -16,7 +16,6 @@ L.Icon.Default.mergeOptions({
 });
 
 const Map = () => {
-  const apiUrl = import.meta.env.VITE_API_URL || "";
   const [locations, setLocations] = useState([]);
   const [diagnoses, setDiagnoses] = useState({});
   const [selectedDiagnosis, setSelectedDiagnosis] = useState("");
@@ -27,8 +26,8 @@ const Map = () => {
     const fetchData = async () => {
       try {
         const [mapResponse, diagnosesResponse] = await Promise.all([
-          fetch(`${apiUrl}/api/getmap`),
-          fetch(`${apiUrl}/api/getdiagnoses`),
+          fetch(`${import.meta.env.VITE_API_URL}/api/getmap`),
+          fetch(`${import.meta.env.VITE_API_URL}/api/getdiagnoses`),
         ]);
 
         if (!mapResponse.ok || !diagnosesResponse.ok) {

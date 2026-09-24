@@ -63,7 +63,7 @@ const ECGResults = () => {
   const [showColorPopup, setShowColorPopup] = useState(false);
   const [loadingColor, setLoadingColor] = useState(false);
   const [db, setDb] = useState(null);
-  const API_URL = import.meta.env.VITE_API_URL || "";
+  const API_URL = import.meta.env.VITE_API_URL;
   const colorOptions = ["#2196F3", "#FFEB3B", "#F44336", "#4CAF50", "#9C27B0"];
 
   const [isDarkMode, setIsDarkMode] = useState(
