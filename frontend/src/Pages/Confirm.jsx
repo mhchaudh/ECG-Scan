@@ -79,7 +79,7 @@ const Confirm = () => {
   const originalImageRef = useRef(null);
 
   const fuse = new Fuse([], { keys: ["display_name"], threshold: 0.3 });
-  const API_URL = import.meta.env.VITE_API_URL;
+  const API_URL = import.meta.env.VITE_API_URL || "";
 
   useEffect(() => {
     // Initialize IndexedDB
